@@ -19,7 +19,7 @@
 
 /* define */
 enum {
-	DEBUG = 0,
+	DEBUG = 1,
 	BUFSIZE = 8192 * 2,
 	LISTNUM = 16, /* max midi ch? */
 };
@@ -51,17 +51,17 @@ void getsysex();
 state getmeta();
 
 state checkmsg();
-void on_note(unsigned char status);
-void off_note(unsigned char status);
+void on_note(unsigned char *ptr_buf, unsigned char status);
+void off_note(unsigned char *ptr_buf, unsigned char status);
 
 void init();
 void destroy();
 
 /* global variable */
 struct hdinfo hd;
-unsigned char *ptr_buf; /* pointer to reading buffer */
 struct note_header list_head[LISTNUM]; /* list header and pointer to note list */
 unsigned char prev_status[2]; /* store status byte / runnning status flag */
+unsigned char *ptr_buf; /* pointer to reading buffer */
 
 int main(int argc, char *argv[], char *env[])
 {
@@ -103,7 +103,7 @@ int main(int argc, char *argv[], char *env[])
 					switch (state) {
 					case HEADER:
 						/* get datalen, format, tracknum, division */
-						getheader();
+						getheader(ptr_buf);
 						state = TRACK;
 						break;
 					case TRACK:
@@ -111,25 +111,25 @@ int main(int argc, char *argv[], char *env[])
 						destroy();
 
 						/* get track datalen */
-						tracklen = gettrack();
+						tracklen = gettrack(ptr_buf);
 						state = DELTA;
 						break;
 					case DELTA:
 						/* calc deltatime */
-						deltatime = getdelta();
+						deltatime = getdelta(ptr_buf);
 						/* check next message type(midi or sysex or meta) */
-						state = checkmsg();
+						state = checkmsg(ptr_buf);
 						break;
 					case MIDI:
-						getmidi();
+						getmidi(ptr_buf);
 						state = DELTA;
 						break;
 					case SYSEX:
-						getsysex();
+						getsysex(ptr_buf);
 						state = DELTA;
 						break;
 					case META:
-						state = getmeta();
+						state = getmeta(ptr_buf);
 						break;
 					default:
 						fprintf(stderr, "unknown state! exit...\n");
@@ -151,7 +151,7 @@ int main(int argc, char *argv[], char *env[])
 	return 0;
 }
 
-void getheader()
+void getheader(unsigned char *ptr_buf)
 {
 	/* skip "MThd" */
 	ptr_buf += 4;
@@ -180,7 +180,7 @@ void getheader()
 	}
 }
 
-state checkmsg()
+state checkmsg(unsigned char *ptr_buf)
 {
 	if (*ptr_buf & 0x80) { // whether status byte or not
 	if (*ptr_buf <= 0xEF) { // this is MIDI Ivent
@@ -215,7 +215,7 @@ state checkmsg()
 	return -1;
 }
 
-unsigned int gettrack()
+unsigned int gettrack(unsigned char *ptr_buf)
 {
 	unsigned int datalen = 0;
 	int i = 0;
@@ -239,7 +239,7 @@ unsigned int gettrack()
 	return datalen;
 }
 
-unsigned int getdelta()
+unsigned int getdelta(unsigned char *ptr_buf)
 {
 	unsigned int delta = 0;
 	struct note_header *lp, *hd;
@@ -324,7 +324,7 @@ unsigned int getdelta()
 	return delta;
 }
 
-void getmidi()
+void getmidi(unsigned char *ptr_buf)
 {
 	unsigned char status;
 
@@ -341,21 +341,21 @@ void getmidi()
 		if (*(ptr_buf + 1) == 0) {
 			if (DEBUG)
 				fprintf(stderr, "note off(0x9)\n");
-			off_note(status);
+			off_note(ptr_buf, status);
 			ptr_buf += 2;
 
 		}
 		else {
 			if (DEBUG)
 				fprintf(stderr, "note on\n");
-			on_note(status);
+			on_note(ptr_buf, status);
 			ptr_buf += 2;
 		}
 	}
 	else if (status>>4 == 0x8) { // note on message
 		if (DEBUG)
 			fprintf(stderr, "note off(0x8)\n");
-		off_note(status);
+		off_note(ptr_buf, status);
 		ptr_buf += 2;
 	}
 	else if (status>>4 == 0xb) { // control change
@@ -370,7 +370,7 @@ void getmidi()
 	}
 }
 
-void getsysex()
+void getsysex(unsigned char *ptr_buf)
 {
 	/* reset running status */
 	prev_status[0] = 0;
@@ -391,7 +391,7 @@ void getsysex()
 	ptr_buf += datalen;
 }
 
-state getmeta()
+state getmeta(unsigned char *ptr_buf)
 {
 	/* reset running status */
 	prev_status[0] = 0;
@@ -437,7 +437,7 @@ void init()
 	}
 }
 
-void on_note(unsigned char status)
+void on_note(unsigned char *ptr_buf, unsigned char status)
 {
 	struct note_header *lp, *hd, *ap;
 	int ch = (0x0f & status), i = 0;
@@ -483,7 +483,7 @@ void on_note(unsigned char status)
 	}
 }
 
-void off_note(unsigned char status)
+void off_note(unsigned char *ptr_buf, unsigned char status)
 {
 	struct note_header *lp, *hd;
 	int i = 0;
