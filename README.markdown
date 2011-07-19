@@ -8,6 +8,8 @@
 * fix bug
 
 ## ref
+* step / gate notation
+http://sted2.sourceforge.net/sted2_manual/ja/sted2man1.html#trackparm
 
 ## lecense
 MIT LICENSE
