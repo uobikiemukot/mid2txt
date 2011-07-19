@@ -7,9 +7,6 @@
 	09/10/15 ver 0.25 error massage / usage fix
 	11/07/19 code refine / rest note fix
 
-	bug:
-		never end 'main loop' when file size larger than BUFSIZE
-
 	usage: mid2txt <input file>
 */
 #include <stdio.h>
@@ -22,8 +19,8 @@
 
 /* define */
 enum {
-	DEBUG = 1,
-	BUFSIZE = 8192 * 2,
+	DEBUG = 0,
+	MAXFILESIZE = 8192 * 4,
 	LISTNUM = 16, /* max midi ch? */
 };
 
@@ -69,9 +66,9 @@ unsigned char *ptr_buf; /* pointer to reading buffer */
 int main(int argc, char *argv[], char *env[])
 {
 	/* variable */
-	int fd; /* file discripter */
+	FILE *fp; /* file discripter */
 	int n = 0; /* number of read bytes */
-	char buf[BUFSIZE]; /* buffer */
+	char buf[MAXFILESIZE]; /* buffer */
 	int state = HEADER; /* reading status */
 	int i = 0;
 	unsigned int tracklen, deltatime;
@@ -84,8 +81,8 @@ int main(int argc, char *argv[], char *env[])
 	}
 	else {
 		/* open file */
-		if ((fd = open(argv[1], O_RDONLY)) < 0) {
-			perror("open");
+		if ((fp = fopen(argv[1], "r")) < 0) {
+			perror("fopen");
 			exit(EXIT_FAILURE);
 		}
 		else {
@@ -97,7 +94,7 @@ int main(int argc, char *argv[], char *env[])
 			prev_status[1] = 0;
 
 			/* read file */
-			while ((n = read(fd, buf, BUFSIZE)) > 0) { /* main loop */
+			while ((n = fread(buf, 1, MAXFILESIZE, fp)) > 0) { /* main loop */
 				ptr_buf = &buf[0];
 				const unsigned char * const endp = buf + n;
 
@@ -144,8 +141,8 @@ int main(int argc, char *argv[], char *env[])
 			destroy();
 
 			/* close file */
-			if (close(fd) < 0) {
-				perror("close");
+			if (fclose(fp) < 0) {
+				perror("fclose");
 				exit(EXIT_FAILURE);
 			}
 		}
