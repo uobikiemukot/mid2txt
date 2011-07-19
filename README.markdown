@@ -9,7 +9,9 @@
 
 ## ref
 * step / gate notation
-http://sted2.sourceforge.net/sted2_manual/ja/sted2man1.html#trackparm
+ * http://sted2.sourceforge.net/sted2_manual/ja/sted2man1.html#trackparm
+* Standard MIDI Format
+ * http://www2s.biglobe.ne.jp/~yyagi/material/smfspec.html
 
 ## lecense
 MIT LICENSE

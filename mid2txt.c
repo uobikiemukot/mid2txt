@@ -232,7 +232,7 @@ unsigned int gettrack()
 	}
 
 	if (DEBUG) {
-		fprintf(stderr, "--- smf header ---\n");
+		fprintf(stderr, "--- track start ---\n");
 		fprintf(stderr, "datalen:%d\n", datalen);
 	}
 
@@ -314,8 +314,8 @@ unsigned int getdelta()
 	}
 
 	if (count == LISTNUM && delta != 0) {
-		fprintf(stderr, "rest delta:%d\n", delta);
-		//fprintf(stdout, "0 0 %d 0 0\n", delta);
+		fprintf(stderr, "rest delta:%d count:%d\n", delta, count);
+		fprintf(stdout, "0 0 %d 0 0\n", delta);
 	}
 
 	return delta;
