@@ -5,7 +5,7 @@
 	09/04/05-09/04/07 ver 0.1
 	09/09/29-09/10/01 ver 0.2 rest note at start of mid
 	09/10/15 ver 0.25 error massage / usage fix
-	11/07/19 code refine / !remove ver 0.2 rest note fix
+	11/07/19 code refine / rest note fix
 
 	usage: mid2txt <input file>
 */
@@ -313,9 +313,12 @@ unsigned int getdelta()
 		i++;
 	}
 
-	if (count == LISTNUM && delta != 0) {
-		fprintf(stderr, "rest delta:%d count:%d\n", delta, count);
-		fprintf(stdout, "0 0 %d 0 0\n", delta);
+	if (count == LISTNUM && delta != 0 && (*ptr_buf & 0xF0) == 0x90) {
+		if (DEBUG) {
+			fprintf(stderr, "rest ptr_buf:%.2X\n", *ptr_buf);
+			fprintf(stderr, "rest delta:%d count:%d ch:%d\n", delta, count, *ptr_buf & 0x0F);
+		}
+		fprintf(stdout, "%d 0 %d 0 0\n", *ptr_buf & 0x0F, delta);
 	}
 
 	return delta;
@@ -399,7 +402,7 @@ state getmeta()
 
 	if (*ptr_buf == 0x2F && *(ptr_buf + 1) == 0x00) {
 		if (DEBUG)
-			fprintf(stderr, "track end\n");
+			fprintf(stderr, "\n--- track end ---\n");
 		ptr_buf += 2;
 
 		return TRACK;
