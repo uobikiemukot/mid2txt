@@ -19,7 +19,7 @@
 
 /* define */
 enum {
-	DEBUG = 1,
+	DEBUG = 0,
 	BUFSIZE = 8192,
 	LISTNUM = 16, /* max midi ch? */
 };
