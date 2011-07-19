@@ -1,11 +1,13 @@
 # mid2txt: midi to text converter by haru
 
 ## feature
+* step / gate notation(see ref)
 * dirty code
 
 ## todo
 * refine code
 * fix bug
+* handle other smf format
 
 ## ref
 * step / gate notation
