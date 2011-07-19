@@ -7,6 +7,9 @@
 	09/10/15 ver 0.25 error massage / usage fix
 	11/07/19 code refine / rest note fix
 
+	bug:
+		never end 'main loop' when file size larger than BUFSIZE
+
 	usage: mid2txt <input file>
 */
 #include <stdio.h>
@@ -51,8 +54,8 @@ void getsysex();
 state getmeta();
 
 state checkmsg();
-void on_note(unsigned char *ptr_buf, unsigned char status);
-void off_note(unsigned char *ptr_buf, unsigned char status);
+void on_note(unsigned char status);
+void off_note(unsigned char status);
 
 void init();
 void destroy();
@@ -94,7 +97,7 @@ int main(int argc, char *argv[], char *env[])
 			prev_status[1] = 0;
 
 			/* read file */
-			while ((n = read(fd, buf, BUFSIZE)) > 0) {
+			while ((n = read(fd, buf, BUFSIZE)) > 0) { /* main loop */
 				ptr_buf = &buf[0];
 				const unsigned char * const endp = buf + n;
 
@@ -103,7 +106,7 @@ int main(int argc, char *argv[], char *env[])
 					switch (state) {
 					case HEADER:
 						/* get datalen, format, tracknum, division */
-						getheader(ptr_buf);
+						getheader();
 						state = TRACK;
 						break;
 					case TRACK:
@@ -111,25 +114,25 @@ int main(int argc, char *argv[], char *env[])
 						destroy();
 
 						/* get track datalen */
-						tracklen = gettrack(ptr_buf);
+						tracklen = gettrack();
 						state = DELTA;
 						break;
 					case DELTA:
 						/* calc deltatime */
-						deltatime = getdelta(ptr_buf);
+						deltatime = getdelta();
 						/* check next message type(midi or sysex or meta) */
-						state = checkmsg(ptr_buf);
+						state = checkmsg();
 						break;
 					case MIDI:
-						getmidi(ptr_buf);
+						getmidi();
 						state = DELTA;
 						break;
 					case SYSEX:
-						getsysex(ptr_buf);
+						getsysex();
 						state = DELTA;
 						break;
 					case META:
-						state = getmeta(ptr_buf);
+						state = getmeta();
 						break;
 					default:
 						fprintf(stderr, "unknown state! exit...\n");
@@ -151,7 +154,7 @@ int main(int argc, char *argv[], char *env[])
 	return 0;
 }
 
-void getheader(unsigned char *ptr_buf)
+void getheader()
 {
 	/* skip "MThd" */
 	ptr_buf += 4;
@@ -180,7 +183,7 @@ void getheader(unsigned char *ptr_buf)
 	}
 }
 
-state checkmsg(unsigned char *ptr_buf)
+state checkmsg()
 {
 	if (*ptr_buf & 0x80) { // whether status byte or not
 	if (*ptr_buf <= 0xEF) { // this is MIDI Ivent
@@ -215,7 +218,7 @@ state checkmsg(unsigned char *ptr_buf)
 	return -1;
 }
 
-unsigned int gettrack(unsigned char *ptr_buf)
+unsigned int gettrack()
 {
 	unsigned int datalen = 0;
 	int i = 0;
@@ -239,7 +242,7 @@ unsigned int gettrack(unsigned char *ptr_buf)
 	return datalen;
 }
 
-unsigned int getdelta(unsigned char *ptr_buf)
+unsigned int getdelta()
 {
 	unsigned int delta = 0;
 	struct note_header *lp, *hd;
@@ -324,7 +327,7 @@ unsigned int getdelta(unsigned char *ptr_buf)
 	return delta;
 }
 
-void getmidi(unsigned char *ptr_buf)
+void getmidi()
 {
 	unsigned char status;
 
@@ -341,21 +344,21 @@ void getmidi(unsigned char *ptr_buf)
 		if (*(ptr_buf + 1) == 0) {
 			if (DEBUG)
 				fprintf(stderr, "note off(0x9)\n");
-			off_note(ptr_buf, status);
+			off_note(status);
 			ptr_buf += 2;
 
 		}
 		else {
 			if (DEBUG)
 				fprintf(stderr, "note on\n");
-			on_note(ptr_buf, status);
+			on_note(status);
 			ptr_buf += 2;
 		}
 	}
 	else if (status>>4 == 0x8) { // note on message
 		if (DEBUG)
 			fprintf(stderr, "note off(0x8)\n");
-		off_note(ptr_buf, status);
+		off_note(status);
 		ptr_buf += 2;
 	}
 	else if (status>>4 == 0xb) { // control change
@@ -370,7 +373,7 @@ void getmidi(unsigned char *ptr_buf)
 	}
 }
 
-void getsysex(unsigned char *ptr_buf)
+void getsysex()
 {
 	/* reset running status */
 	prev_status[0] = 0;
@@ -391,7 +394,7 @@ void getsysex(unsigned char *ptr_buf)
 	ptr_buf += datalen;
 }
 
-state getmeta(unsigned char *ptr_buf)
+state getmeta()
 {
 	/* reset running status */
 	prev_status[0] = 0;
@@ -437,7 +440,7 @@ void init()
 	}
 }
 
-void on_note(unsigned char *ptr_buf, unsigned char status)
+void on_note(unsigned char status)
 {
 	struct note_header *lp, *hd, *ap;
 	int ch = (0x0f & status), i = 0;
@@ -483,7 +486,7 @@ void on_note(unsigned char *ptr_buf, unsigned char status)
 	}
 }
 
-void off_note(unsigned char *ptr_buf, unsigned char status)
+void off_note(unsigned char status)
 {
 	struct note_header *lp, *hd;
 	int i = 0;
