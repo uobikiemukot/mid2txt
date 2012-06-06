@@ -81,7 +81,7 @@ int main(int argc, char *argv[], char *env[])
 	}
 	else {
 		/* open file */
-		if ((fp = fopen(argv[1], "r")) < 0) {
+		if ((fp = fopen(argv[1], "r")) == NULL) {
 			perror("fopen");
 			exit(EXIT_FAILURE);
 		}
